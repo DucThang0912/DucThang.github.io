@@ -290,3 +290,37 @@ function initThreeJS() {
 
     animate();
 }
+
+// Dark mode toggle functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const body = document.body;
+
+    // Check for saved dark mode preference
+    const darkMode = localStorage.getItem('darkMode');
+    if (darkMode === 'enabled') {
+        body.classList.add('dark-mode');
+    }
+
+    // Toggle dark mode
+    darkModeToggle.addEventListener('click', () => {
+        body.classList.toggle('dark-mode');
+        
+        // Add ripple effect
+        const ripple = document.createElement('span');
+        ripple.classList.add('ripple');
+        darkModeToggle.appendChild(ripple);
+        
+        // Save preference
+        if (body.classList.contains('dark-mode')) {
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            localStorage.setItem('darkMode', null);
+        }
+
+        // Remove ripple after animation
+        setTimeout(() => {
+            ripple.remove();
+        }, 1000);
+    });
+});
