@@ -128,129 +128,165 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Three.js initialization
 function initThreeJS() {
-    // Create scene
     const scene = new THREE.Scene();
-    
-    // Create camera
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 30;
-    
-    // Create renderer
+
     const renderer = new THREE.WebGLRenderer({
         canvas: document.getElementById('bg'),
         antialias: true,
         alpha: true
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    
-    // Create particles
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Enhanced particles system
     const particlesGeometry = new THREE.BufferGeometry();
-    const particlesCount = 2000;
+    const particlesCount = 5000; // Increased particle count
     
     const posArray = new Float32Array(particlesCount * 3);
+    const scaleArray = new Float32Array(particlesCount);
     
-    for (let i = 0; i < particlesCount * 3; i++) {
+    for (let i = 0; i < particlesCount * 3; i += 3) {
         posArray[i] = (Math.random() - 0.5) * 100;
+        posArray[i + 1] = (Math.random() - 0.5) * 100;
+        posArray[i + 2] = (Math.random() - 0.5) * 100;
+        scaleArray[i / 3] = Math.random();
     }
     
     particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-    
-    // Create material
-    const particlesMaterial = new THREE.PointsMaterial({
-        size: 0.1,
-        color: 0x6c63ff,
+    particlesGeometry.setAttribute('scale', new THREE.BufferAttribute(scaleArray, 1));
+
+    // Create custom shader material for particles
+    const particlesMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            time: { value: 0 },
+            color: { value: new THREE.Color(0x6c63ff) }
+        },
+        vertexShader: `
+            attribute float scale;
+            uniform float time;
+            void main() {
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_PointSize = scale * (300.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 color;
+            void main() {
+                float strength = distance(gl_PointCoord, vec2(0.5));
+                strength = 1.0 - strength;
+                strength = pow(strength, 3.0);
+                gl_FragColor = vec4(color, strength);
+            }
+        `,
         transparent: true,
-        opacity: 0.8
+        blending: THREE.AdditiveBlending
     });
-    
-    // Create points
+
     const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
     scene.add(particlesMesh);
-    
-    // Add some colored lights
+
+    // Add dynamic geometric objects
+    const geometries = [];
+    for (let i = 0; i < 50; i++) {
+        const geometry = new THREE.IcosahedronGeometry(Math.random() * 2, 0);
+        const material = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(Math.random(), Math.random(), Math.random()),
+            wireframe: true
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        
+        mesh.position.set(
+            (Math.random() - 0.5) * 100,
+            (Math.random() - 0.5) * 100,
+            (Math.random() - 0.5) * 100
+        );
+        
+        mesh.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+        
+        geometries.push({
+            mesh,
+            rotationSpeed: {
+                x: (Math.random() - 0.5) * 0.02,
+                y: (Math.random() - 0.5) * 0.02,
+                z: (Math.random() - 0.5) * 0.02
+            }
+        });
+        
+        scene.add(mesh);
+    }
+
+    // Enhanced lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
-    
-    const pointLight1 = new THREE.PointLight(0x6c63ff, 1);
+
+    const pointLight1 = new THREE.PointLight(0x6c63ff, 2);
     pointLight1.position.set(20, 20, 20);
     scene.add(pointLight1);
-    
-    const pointLight2 = new THREE.PointLight(0xff9000, 1);
+
+    const pointLight2 = new THREE.PointLight(0xff9000, 2);
     pointLight2.position.set(-20, -20, 20);
     scene.add(pointLight2);
-    
-    // Create floating objects
-    const geometry1 = new THREE.TorusGeometry(10, 3, 16, 100);
-    const material1 = new THREE.MeshStandardMaterial({ 
-        color: 0x6c63ff,
-        wireframe: true
-    });
-    const torus = new THREE.Mesh(geometry1, material1);
-    torus.position.set(30, 0, -60);
-    scene.add(torus);
-    
-    const geometry2 = new THREE.OctahedronGeometry(8, 0);
-    const material2 = new THREE.MeshStandardMaterial({ 
-        color: 0xff9000,
-        wireframe: true
-    });
-    const octahedron = new THREE.Mesh(geometry2, material2);
-    octahedron.position.set(-30, -10, -50);
-    scene.add(octahedron);
-    
-    const geometry3 = new THREE.IcosahedronGeometry(15, 0);
-    const material3 = new THREE.MeshStandardMaterial({ 
-        color: 0x00ffff,
-        wireframe: true
-    });
-    const icosahedron = new THREE.Mesh(geometry3, material3);
-    icosahedron.position.set(0, 30, -100);
-    scene.add(icosahedron);
-    
-    // Mouse movement effect
+
+    // Interactive mouse movement
     let mouseX = 0;
     let mouseY = 0;
-    
-    function onDocumentMouseMove(event) {
+    let targetX = 0;
+    let targetY = 0;
+
+    document.addEventListener('mousemove', (event) => {
         mouseX = (event.clientX - window.innerWidth / 2) / 100;
         mouseY = (event.clientY - window.innerHeight / 2) / 100;
-    }
-    
-    document.addEventListener('mousemove', onDocumentMouseMove);
-    
+    });
+
+    // Parallax effect on scroll
+    let scrollY = window.scrollY;
+    window.addEventListener('scroll', () => {
+        scrollY = window.scrollY;
+    });
+
     // Handle window resize
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     });
-    
+
     // Animation loop
     function animate() {
         requestAnimationFrame(animate);
-        
-        // Rotate objects
-        torus.rotation.x += 0.01;
-        torus.rotation.y += 0.005;
-        
-        octahedron.rotation.x -= 0.007;
-        octahedron.rotation.y -= 0.01;
-        
-        icosahedron.rotation.x += 0.003;
-        icosahedron.rotation.z += 0.005;
-        
+
+        // Smooth camera movement
+        targetX = mouseX * 0.5;
+        targetY = mouseY * 0.5;
+        camera.position.x += (targetX - camera.position.x) * 0.05;
+        camera.position.y += (-targetY - camera.position.y) * 0.05;
+        camera.lookAt(scene.position);
+
         // Rotate particles
         particlesMesh.rotation.x += 0.0005;
         particlesMesh.rotation.y += 0.0005;
-        
-        // Move scene based on mouse position
-        particlesMesh.position.x = mouseX * 0.1;
-        particlesMesh.position.y = -mouseY * 0.1;
-        
-        // Render scene
+        particlesMesh.position.y = -scrollY * 0.003;
+
+        // Update particle shader
+        particlesMaterial.uniforms.time.value += 0.01;
+
+        // Animate geometric objects
+        geometries.forEach((obj) => {
+            obj.mesh.rotation.x += obj.rotationSpeed.x;
+            obj.mesh.rotation.y += obj.rotationSpeed.y;
+            obj.mesh.rotation.z += obj.rotationSpeed.z;
+        });
+
         renderer.render(scene, camera);
     }
-    
+
     animate();
 }

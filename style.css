@@ -27,13 +27,18 @@
     overflow-x: hidden;
     position: relative;
   }
-  
-  canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: -1;
-  }
+
+ /* Three.js Canvas Styling */
+    canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        pointer-events: none;
+        opacity: 0.8;
+    }
   
   .container {
     width: 90%;
@@ -207,6 +212,7 @@
   .logo {
     font-size: 28px;
     font-weight: 700;
+    padding-left: 2%;
     color: var(--primary-color);
   }
   
